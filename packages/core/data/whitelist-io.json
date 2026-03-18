@@ -1,0 +1,21 @@
+[
+  "wpguardian.io", "webflow.io", "itch.io", "trustindex.io", "redis.io",
+  "gitbook.io", "codepen.io", "complianz.io", "gohugo.io", "pantheonsite.io",
+  "envoyer.io", "kubernetes.io", "termly.io", "osf.io", "gitlab.io",
+  "pxf.io", "gitea.io", "sjv.io", "keybase.io", "hackmd.io",
+  "spring.io", "safebrowse.io", "sourceforge.io", "trezor.io", "devowl.io",
+  "meduza.io", "shinyapps.io", "systeme.io", "qt.io", "jenkins.io",
+  "elevenlabs.io", "material.io", "greenhouse.io", "hackaday.io", "metooo.io",
+  "home-assistant.io", "synthesia.io", "invideo.io", "notes.io", "gate.io",
+  "borlabs.io", "hexo.io", "atom.io", "sanity.io", "prometheus.io",
+  "soup.io", "podigee.io", "swagger.io", "hackster.io", "angular.io",
+  "velog.io", "urlscan.io", "veed.io", "gleam.io", "raindrop.io",
+  "gabia.io", "balena.io", "prismic.io", "stocksnap.io", "tapas.io",
+  "keywordtool.io", "thenewstack.io", "terraform.io", "ghost.io", "startersites.io",
+  "pypa.io", "n8n.io", "ipfs.io", "statuspage.io", "groups.io",
+  "facer.io", "snyk.io", "gitbooks.io", "scrapbox.io", "crates.io",
+  "cncf.io", "linuxserver.io", "the7.io", "codesandbox.io", "bubble.io",
+  "snapcraft.io", "gogs.io", "cloudimg.io", "bitbucket.io", "emplifi.io",
+  "jwt.io", "fontawesome.io", "mailtrack.io", "allmende.io", "element.io",
+  "readme.io", "plausible.io", "shodan.io", "sentry.io", "metamask.io"
+]

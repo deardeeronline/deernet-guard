@@ -1,0 +1,33 @@
+{
+  "riskyTLDs": [
+    "xyz", "top", "icu", "fun", "site", "online",
+    "store", "shop", "club", "live", "lol",
+    "cloud", "digital", "tech", "buzz", "link",
+    "click", "space", "work", "life", "today",
+    "news", "media", "email", "support", "services",
+    "info", "bid", "win", "monster", "quest",
+    "cfd", "sbs", "cyou",
+    "loan", "trade", "download", "review", "accountant",
+    "date", "party", "men", "stream", "racing",
+    "cricket", "science", "faith",
+    "cc", "pw", "tk", "ml", "ga", "cf", "gq"
+  ],
+  "riskySubdomainPlatforms": [
+    "netlify.app",
+    "herokuapp.com",
+    "000webhostapp.com",
+    "pages.dev",
+    "workers.dev",
+    "vercel.app",
+    "firebaseapp.com",
+    "web.app",
+    "surge.sh",
+    "glitch.me",
+    "onrender.com",
+    "up.railway.app",
+    "fly.dev",
+    "repl.co",
+    "weebly.com",
+    "blogspot.com"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "zh": [
+    "登入", "密碼", "銀行", "信用卡", "驗證碼",
+    "帳號", "轉帳", "匯款", "中獎", "領取獎金",
+    "帳戶異常", "凍結", "解鎖", "身份證", "安全驗證",
+    "綁定", "過期", "立即處理", "緊急通知",
+    "錢包授權", "空投", "免費代幣", "私鑰",
+    "助記詞", "閃兌", "高報酬", "挖礦獎勵"
+  ],
+  "en": [
+    "login", "password", "sign in", "verify", "bank",
+    "credit card", "account suspended", "confirm identity",
+    "update payment", "unusual activity", "security alert",
+    "unlock", "expire", "urgent",
+    "connect wallet", "approve transaction", "airdrop",
+    "free token", "seed phrase", "private key",
+    "claim reward", "mint now", "whitelist spot",
+    "flash loan", "high yield", "staking bonus"
+  ]
+}

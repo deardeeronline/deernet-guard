@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deernet Guard — 網站安全分析</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f9fafb;
+      color: #1f2937;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: white;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 20px 0;
+    }
+
+    .container {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    .logo {
+      font-size: 20px;
+      font-weight: 700;
+      color: #111827;
+    }
+
+    .logo span { color: #3b82f6; }
+
+    .search-section {
+      padding: 40px 0;
+    }
+
+    .search-box {
+      display: flex;
+      gap: 8px;
+    }
+
+    .search-input {
+      flex: 1;
+      padding: 12px 16px;
+      font-size: 16px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      outline: none;
+      font-family: "SF Mono", "Fira Code", Consolas, monospace;
+    }
+
+    .search-input:focus { border-color: #3b82f6; }
+
+    .search-btn {
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: 600;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .search-btn:hover { background: #2563eb; }
+
+    .result { padding: 0 0 40px; }
+
+    .result-card {
+      background: white;
+      border-radius: 12px;
+      border: 2px solid #e5e7eb;
+      overflow: hidden;
+    }
+
+    .result-header {
+      padding: 24px;
+      text-align: center;
+    }
+
+    .result-header.safe { background: #f0fdf4; border-bottom: 2px solid #86efac; }
+    .result-header.normal { background: #f9fafb; border-bottom: 2px solid #d1d5db; }
+    .result-header.suspicious { background: #fffbeb; border-bottom: 2px solid #fcd34d; }
+    .result-header.danger { background: #fef2f2; border-bottom: 2px solid #fca5a5; }
+
+    .result-domain {
+      font-size: 24px;
+      font-family: "SF Mono", "Fira Code", Consolas, monospace;
+      font-weight: 700;
+      margin-bottom: 12px;
+      word-break: break-all;
+      letter-spacing: 0.5px;
+    }
+
+    .result-level {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .result-header.safe .result-level { color: #166534; }
+    .result-header.normal .result-level { color: #374151; }
+    .result-header.suspicious .result-level { color: #92400e; }
+    .result-header.danger .result-level { color: #991b1b; }
+
+    .result-score {
+      font-size: 48px;
+      font-weight: 700;
+      margin: 8px 0;
+    }
+
+    .result-header.safe .result-score { color: #22c55e; }
+    .result-header.normal .result-score { color: #9ca3af; }
+    .result-header.suspicious .result-score { color: #f59e0b; }
+    .result-header.danger .result-score { color: #dc2626; }
+
+    .result-body { padding: 24px; }
+
+    .rules-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+    }
+
+    .rule-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    .rule-item:last-child { border-bottom: none; }
+
+    .rule-name { font-size: 15px; color: #374151; }
+    .rule-detail { font-size: 13px; color: #9ca3af; margin-top: 2px; }
+
+    .rule-score {
+      font-size: 15px;
+      font-weight: 700;
+      white-space: nowrap;
+      margin-left: 16px;
+    }
+
+    .rule-score.positive { color: #dc2626; }
+    .rule-score.negative { color: #22c55e; }
+
+    .no-rules {
+      color: #9ca3af;
+      font-size: 15px;
+      text-align: center;
+      padding: 16px 0;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #9ca3af;
+      font-size: 16px;
+    }
+
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="container">
+      <div class="logo">Deernet <span>Guard</span></div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="search-section">
+      <form class="search-box" id="search-form">
+        <input class="search-input" id="domain-input" type="text" placeholder="輸入域名，例如 example.com" autocomplete="off">
+        <button class="search-btn" type="submit">分析</button>
+      </form>
+    </div>
+
+    <div id="loading" class="loading hidden">分析中...</div>
+
+    <div id="result" class="result hidden">
+      <div class="result-card">
+        <div class="result-header" id="result-header">
+          <div class="result-domain" id="result-domain"></div>
+          <div class="result-score" id="result-score"></div>
+          <div class="result-level" id="result-level"></div>
+        </div>
+        <div class="result-body">
+          <div class="rules-title">偵測規則明細</div>
+          <div id="rules-container"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { analyzeSync, classifyRisk, init } from '../../packages/core/scorer.js';
+    import * as psl from '../../node_modules/psl/dist/psl.mjs';
+
+    await init(psl);
+
+    const RULE_LABELS = {
+      'risky-tld': '高風險 TLD',
+      'risky-platform': '免費子域名平台',
+      'domain-age': 'Domain Age',
+      'domain-similarity': '域名相似度',
+      'punycode': 'Punycode / IDN',
+      'ip-address': 'IP 位址直連',
+      'url-at-sign': 'URL 含 @',
+      'excessive-subdomain': '過多子域名',
+      'long-url': 'URL 過長',
+      'sensitive-keyword': '敏感關鍵字',
+      'password-input': '密碼輸入框',
+      'trusted-suffix': '受信任後綴',
+    };
+
+    const LEVEL_LABELS = {
+      safe: '✅ 安全',
+      normal: '正常',
+      suspicious: '⚠️ 可疑',
+      danger: '🚨 危險',
+    };
+
+    const searchForm = document.getElementById('search-form');
+    const domainInput = document.getElementById('domain-input');
+    const loadingEl = document.getElementById('loading');
+    const resultEl = document.getElementById('result');
+    const resultHeader = document.getElementById('result-header');
+    const resultDomain = document.getElementById('result-domain');
+    const resultScore = document.getElementById('result-score');
+    const resultLevel = document.getElementById('result-level');
+    const rulesContainer = document.getElementById('rules-container');
+
+    function analyzeDomain(domain) {
+      loadingEl.classList.remove('hidden');
+      resultEl.classList.add('hidden');
+
+      // Normalize: add https:// if no scheme
+      const url = domain.includes('://') ? domain : `https://${domain}`;
+
+      const result = analyzeSync(url);
+
+      loadingEl.classList.add('hidden');
+      resultEl.classList.remove('hidden');
+
+      // Header
+      resultHeader.className = `result-header ${result.level}`;
+      resultDomain.textContent = result.domain || domain;
+      resultScore.textContent = result.score;
+      resultLevel.textContent = LEVEL_LABELS[result.level] || result.level;
+
+      // Rules
+      if (result.bypass) {
+        rulesContainer.innerHTML = '<div class="no-rules">白名單命中，直接放行</div>';
+      } else if (result.rules.length === 0) {
+        rulesContainer.innerHTML = '<div class="no-rules">未觸發任何偵測規則</div>';
+      } else {
+        rulesContainer.innerHTML = result.rules.map((r) => {
+          const scoreClass = r.score > 0 ? 'positive' : 'negative';
+          const scorePrefix = r.score > 0 ? '+' : '';
+          const detail = r.detail ? `<div class="rule-detail">${r.detail}</div>` : '';
+          return `
+            <div class="rule-item">
+              <div>
+                <div class="rule-name">${RULE_LABELS[r.id] || r.id}</div>
+                ${detail}
+              </div>
+              <div class="rule-score ${scoreClass}">${scorePrefix}${r.score}</div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    searchForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const domain = domainInput.value.trim();
+      if (domain) analyzeDomain(domain);
+    });
+
+    // Auto-analyze from URL parameter
+    const params = new URLSearchParams(location.search);
+    const domainParam = params.get('domain');
+    if (domainParam) {
+      domainInput.value = domainParam;
+      analyzeDomain(domainParam);
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Cache
+scripts/cache/
+
+# OS
+.DS_Store
+
+# Claude
+.claude/
+CLAUDE.md
+
+# Internal docs
+.docs/
+
+# Spectra
+.spectra/
+openspec/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

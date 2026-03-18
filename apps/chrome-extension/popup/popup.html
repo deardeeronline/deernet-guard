@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deer Guard</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1 class="app-name">Deer Guard - 小鹿網路安全插件</h1>
+    </div>
+
+    <div id="domain-display" class="domain"></div>
+
+    <div id="status" class="status">
+      <div id="status-icon" class="status-icon"></div>
+      <div id="status-text" class="status-text"></div>
+    </div>
+
+    <div id="score-display" class="score-display hidden"></div>
+
+    <ul id="rules-list" class="rules-list hidden"></ul>
+
+    <div id="actions" class="actions hidden">
+      <button id="btn-trust" class="btn btn-trust"></button>
+    </div>
+
+    <div class="debug-section">
+      <label class="debug-label">
+        <input type="checkbox" id="debug-mode"> Debug Mode
+      </label>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

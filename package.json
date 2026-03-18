@@ -1,0 +1,15 @@
+{
+  "name": "deernet-guard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Anti-phishing browser extension with privacy-first design",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-extension.js",
+    "generate-whitelist": "node scripts/generate-whitelist.js",
+    "generate-icons": "node scripts/generate-icons.js"
+  },
+  "dependencies": {
+    "psl": "^1.13.0"
+  }
+}
