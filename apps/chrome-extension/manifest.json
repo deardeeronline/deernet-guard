@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Deer Guard - 小鹿網路安全插件",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "即時偵測可疑網站，保護您免受釣魚詐騙。隱私優先，所有判斷在本地完成。",
   "permissions": [
     "activeTab",
@@ -24,6 +24,7 @@
     "https://rdap.nic.win/*",
     "https://rdap.nic.loan/*",
     "https://ccrdap.twnic.tw/*",
+    "https://rdap.nic.taipei/*",
     "https://rdap.nominet.uk/*",
     "https://rdap.nic.fr/*",
     "https://rdap.sidn.nl/*",

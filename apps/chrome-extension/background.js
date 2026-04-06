@@ -46,8 +46,9 @@ const RDAP_SERVERS = {
   win: 'https://rdap.nic.win',
   loan: 'https://rdap.nic.loan',
   cc: 'https://tld-rdap.verisign.com/cc/v1',
-  // Country TLDs
+  // Country/City TLDs
   tw: 'https://ccrdap.twnic.tw/taiwan',
+  taipei: 'https://rdap.nic.taipei',
   uk: 'https://rdap.nominet.uk/uk',
   fr: 'https://rdap.nic.fr',
   nl: 'https://rdap.sidn.nl',

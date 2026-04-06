@@ -18,7 +18,7 @@
   const ALL_KEYWORDS = [...SENSITIVE_KEYWORDS.zh, ...SENSITIVE_KEYWORDS.en.map(k => k.toLowerCase())];
 
   // === Cache constants ===
-  const RULES_VERSION = 10; // bump this when rules change
+  const RULES_VERSION = 11; // bump this when rules change
   const REPORT_TTL = 10 * 24 * 60 * 60 * 1000;
   const RDAP_TTL = 365 * 24 * 60 * 60 * 1000;
 
