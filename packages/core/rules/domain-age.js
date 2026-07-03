@@ -1,20 +1,9 @@
-// TLD → RDAP server mapping
-const RDAP_SERVERS = {
-  com: 'https://rdap.verisign.com/com/v1',
-  net: 'https://rdap.verisign.com/net/v1',
-  org: 'https://rdap.org/domain',
-  tw: 'https://rdap.twnic.tw/rdap/domain',
-  uk: 'https://rdap.nominet.uk/uk/domain',
-  de: 'https://rdap.denic.de/domain',
-  jp: 'https://rdap.jprs.jp/rdap/domain',
-  au: 'https://rdap.auda.org.au/domain',
-  fr: 'https://rdap.nic.fr/domain',
-  nl: 'https://rdap.sidn.nl/domain',
-  io: 'https://rdap.nic.io/domain',
-  xyz: 'https://rdap.centralnic.com/xyz/domain',
-  top: 'https://rdap.centralnic.com/top/domain',
-  info: 'https://rdap.afilias.net/rdap/info/domain',
-};
+// TLD → RDAP server mapping, generated from the IANA RDAP bootstrap registry
+// by scripts/generate-rdap-servers.js. Same map the extension build injects
+// into background.js — regenerate with `npm run generate-rdap-servers`.
+import rdapData from '../data/rdap-servers.json' with { type: 'json' };
+
+const RDAP_SERVERS = rdapData.servers;
 
 const RDAP_TIMEOUT = 5000;
 
@@ -28,11 +17,6 @@ function getRdapUrl(domain) {
   const tld = parts[parts.length - 1].toLowerCase();
   const server = RDAP_SERVERS[tld];
   if (!server) return null;
-
-  // Some servers use /domain/{name} path format, others use path directly
-  if (server.endsWith('/domain')) {
-    return `${server}/${domain}`;
-  }
   return `${server}/domain/${domain}`;
 }
 

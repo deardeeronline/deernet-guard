@@ -136,6 +136,8 @@ function render(report) {
 }
 
 let pollTimer = null;
+let pollCount = 0;
+const POLL_LIMIT = 40; // 40 × 500ms = 20s, then give up
 
 function renderUnavailable() {
   domainDisplay.textContent = '—';
@@ -174,7 +176,13 @@ function loadReport() {
           return;
         }
       }
-      // No report yet — show checking state and poll
+      // No report yet — show checking state and poll (bounded)
+      if (pollCount >= POLL_LIMIT) {
+        if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+        renderUnavailable();
+        return;
+      }
+      pollCount++;
       renderChecking(hostname);
       if (!pollTimer) {
         pollTimer = setInterval(() => loadReport(), 500);

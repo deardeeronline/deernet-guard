@@ -7,6 +7,8 @@
   "scripts": {
     "build": "node scripts/build-extension.js",
     "generate-whitelist": "node scripts/generate-whitelist.js",
+    "generate-rdap-servers": "node scripts/generate-rdap-servers.js",
+    "check-rdap-health": "node scripts/check-rdap-health.js",
     "generate-icons": "node scripts/generate-icons.js"
   },
   "dependencies": {
