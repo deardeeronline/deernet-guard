@@ -1,67 +1,11 @@
-// Minimal service worker: RDAP proxy only.
+// Minimal service worker: RDAP proxy + storage pruning.
 // No ES modules, no imports, no top-level await.
+// Build script injects the IANA-bootstrap-generated TLD → RDAP server map below.
+// Query URL is always: <base url>/domain/<domain>
 
-const RDAP_SERVERS = {
-  // Major TLDs
-  com: 'https://rdap.verisign.com/com/v1',
-  net: 'https://rdap.verisign.com/net/v1',
-  org: 'https://rdap.publicinterestregistry.org/rdap',
-  // CentralNic
-  xyz: 'https://rdap.centralnic.com/xyz',
-  icu: 'https://rdap.centralnic.com/icu',
-  fun: 'https://rdap.centralnic.com/fun',
-  site: 'https://rdap.centralnic.com/site',
-  online: 'https://rdap.centralnic.com/online',
-  store: 'https://rdap.centralnic.com/store',
-  lol: 'https://rdap.centralnic.com/lol',
-  tech: 'https://rdap.centralnic.com/tech',
-  space: 'https://rdap.centralnic.com/space',
-  monster: 'https://rdap.centralnic.com/monster',
-  quest: 'https://rdap.centralnic.com/quest',
-  cfd: 'https://rdap.centralnic.com/cfd',
-  sbs: 'https://rdap.centralnic.com/sbs',
-  cyou: 'https://rdap.centralnic.com/cyou',
-  pw: 'https://rdap.centralnic.com/pw',
-  // IdentityDigital
-  info: 'https://rdap.identitydigital.services/rdap',
-  live: 'https://rdap.identitydigital.services/rdap',
-  digital: 'https://rdap.identitydigital.services/rdap',
-  life: 'https://rdap.identitydigital.services/rdap',
-  today: 'https://rdap.identitydigital.services/rdap',
-  news: 'https://rdap.identitydigital.services/rdap',
-  media: 'https://rdap.identitydigital.services/rdap',
-  email: 'https://rdap.identitydigital.services/rdap',
-  support: 'https://rdap.identitydigital.services/rdap',
-  services: 'https://rdap.identitydigital.services/rdap',
-  // Other gTLDs
-  top: 'https://rdap.zdnsgtld.com/top',
-  shop: 'https://rdap.gmoregistry.net/rdap',
-  club: 'https://rdap.nic.club',
-  buzz: 'https://rdap.nic.buzz',
-  link: 'https://rdap.tucowsregistry.net/rdap',
-  click: 'https://rdap.tucowsregistry.net/rdap',
-  work: 'https://rdap.nic.work',
-  cloud: 'https://rdap.registry.cloud/rdap',
-  bid: 'https://rdap.nic.bid',
-  win: 'https://rdap.nic.win',
-  loan: 'https://rdap.nic.loan',
-  cc: 'https://tld-rdap.verisign.com/cc/v1',
-  // Country/City TLDs
-  tw: 'https://ccrdap.twnic.tw/taiwan',
-  taipei: 'https://rdap.nic.taipei',
-  uk: 'https://rdap.nominet.uk/uk',
-  fr: 'https://rdap.nic.fr',
-  nl: 'https://rdap.sidn.nl',
-  au: 'https://rdap.cctld.au/rdap',
-  ca: 'https://rdap.ca.fury.ca/rdap',
-  br: 'https://rdap.registro.br',
-  sg: 'https://rdap.sgnic.sg/rdap',
-  no: 'https://rdap.norid.no',
-  fi: 'https://rdap.fi/rdap/rdap',
-  pl: 'https://rdap.dns.pl',
-  cz: 'https://rdap.nic.cz',
-  ar: 'https://rdap.nic.ar',
-};
+var RDAP_SERVERS = __RDAP_SERVERS__;
+
+var RDAP_TIMEOUT = 5000;
 
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (message.type !== 'RDAP_QUERY') return;
@@ -69,11 +13,19 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   var domain = message.domain;
   var parts = domain.split('.');
   var tld = parts[parts.length - 1].toLowerCase();
-  var isExplicit = !!RDAP_SERVERS[tld];
-  var server = RDAP_SERVERS[tld] || 'https://rdap.identitydigital.services/rdap';
+  var server = RDAP_SERVERS[tld];
+
+  if (!server) {
+    // TLD has no RDAP service in the IANA bootstrap registry (e.g. .co, .io, .jp).
+    // Answer immediately: no network request, and no fallback query to a
+    // third-party registry (which would leak the domain and always 404 anyway).
+    sendResponse({ registrationDate: null, hasServer: false });
+    return;
+  }
+
   var url = server + '/domain/' + domain;
   var controller = new AbortController();
-  var timeoutId = setTimeout(function () { controller.abort(); }, 5000);
+  var timeoutId = setTimeout(function () { controller.abort(); }, RDAP_TIMEOUT);
 
   fetch(url, {
     signal: controller.signal,
@@ -86,8 +38,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     })
     .then(function (data) {
       if (!data) {
-        // 404 or empty: if fallback, treat as no server
-        sendResponse({ registrationDate: null, hasServer: isExplicit });
+        sendResponse({ registrationDate: null, hasServer: true });
         return;
       }
       var events = data.events || [];
@@ -99,8 +50,42 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     })
     .catch(function () {
       clearTimeout(timeoutId);
-      sendResponse({ registrationDate: null, hasServer: isExplicit });
+      sendResponse({ registrationDate: null, hasServer: true });
     });
 
   return true;
 });
+
+// --- Storage pruning ---
+// report:/rdap: entries are only TTL-checked on read and were never deleted,
+// so chrome.storage.local grows without bound. Prune expired entries at most
+// once per day, on service worker startup.
+
+var PRUNE_INTERVAL = 24 * 60 * 60 * 1000;
+var REPORT_TTL = 10 * 24 * 60 * 60 * 1000; // keep in sync with content.js
+var RDAP_TTL = 365 * 24 * 60 * 60 * 1000;
+var RDAP_FAIL_TTL = 24 * 60 * 60 * 1000;
+
+function pruneStorage() {
+  chrome.storage.local.get(null, function (all) {
+    var now = Date.now();
+    if (now - (all.lastPrune || 0) < PRUNE_INTERVAL) return;
+
+    var remove = [];
+    for (var key in all) {
+      var entry = all[key];
+      if (!entry || typeof entry.timestamp !== 'number') continue;
+      if (key.indexOf('report:') === 0) {
+        if (now - entry.timestamp > REPORT_TTL) remove.push(key);
+      } else if (key.indexOf('rdap:') === 0) {
+        var ttl = entry.registrationDate ? RDAP_TTL : RDAP_FAIL_TTL;
+        if (now - entry.timestamp > ttl) remove.push(key);
+      }
+    }
+
+    if (remove.length > 0) chrome.storage.local.remove(remove);
+    chrome.storage.local.set({ lastPrune: now });
+  });
+}
+
+pruneStorage();

@@ -96,13 +96,29 @@ function cachedDownload(cacheFile, url, label) {
 
 // --- Source: Tranco ---
 
+// Fallback snapshot if the latest-list API is unreachable
+const TRANCO_FALLBACK_ID = 'Z264G';
+
+async function resolveLatestTrancoId() {
+  // https://tranco-list.eu/api_documentation — GET /api/lists/date/latest
+  try {
+    const meta = JSON.parse(await download('https://tranco-list.eu/api/lists/date/latest'));
+    if (meta.list_id && meta.available) return meta.list_id;
+  } catch (e) {
+    console.error(`  latest-list API failed (${e.message}), falling back to ${TRANCO_FALLBACK_ID}`);
+  }
+  return TRANCO_FALLBACK_ID;
+}
+
 async function fetchTranco() {
   console.log('\n1. Tranco Top 5000');
   try {
+    const listId = await resolveLatestTrancoId();
+    console.log(`  list id: ${listId}`);
     const csv = await cachedDownload(
-      join(CACHE_DIR, 'tranco-top5000.csv'),
-      'https://tranco-list.eu/download/Z264G/5000',
-      'tranco-list.eu top 5000'
+      join(CACHE_DIR, `tranco-${listId}-top5000.csv`),
+      `https://tranco-list.eu/download/${listId}/5000`,
+      `tranco-list.eu top 5000 (${listId})`
     );
     const domains = csv
       .split('\n')

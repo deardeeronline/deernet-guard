@@ -18,9 +18,12 @@
   const ALL_KEYWORDS = [...SENSITIVE_KEYWORDS.zh, ...SENSITIVE_KEYWORDS.en.map(k => k.toLowerCase())];
 
   // === Cache constants ===
-  const RULES_VERSION = 11; // bump this when rules change
+  // Cache key version = manual rules version + build-time hash of injected data,
+  // so both logic changes and data refreshes invalidate cached reports.
+  const RULES_VERSION = '12.' + __DATA_HASH__;
   const REPORT_TTL = 10 * 24 * 60 * 60 * 1000;
   const RDAP_TTL = 365 * 24 * 60 * 60 * 1000;
+  const RDAP_FAIL_TTL = 24 * 60 * 60 * 1000; // failed lookups retry after a day
 
   // === Domain parsing ===
   function parseDomain(urlStr) {
@@ -93,6 +96,10 @@
     let best = 0, match = '';
     for (const e of whitelistLabels) {
       if (!e.label || e.full === domain) continue;
+      // similarity ≥ 0.8 requires edit distance ≤ 0.2 × maxLen, and distance is
+      // at least the length difference — skip pairs that can't possibly match
+      const maxLen = Math.max(label.length, e.label.length);
+      if (Math.abs(label.length - e.label.length) > 0.2 * maxLen) continue;
       const dist = levenshtein(label, e.label);
       const sim = 1 - dist / Math.max(label.length, e.label.length);
       if (sim > best) { best = sim; match = e.full; }
@@ -311,6 +318,40 @@
     shadow.getElementById('btn-close').addEventListener('click', hideWarning);
   }
 
+  // === Late password field detection ===
+  // The initial scan runs at document_idle; SPAs often mount login forms later.
+  // Watch for a password input appearing after the fact, add the rule to the
+  // stored report, and escalate to a warning if the score crosses the threshold.
+  function watchForPassword(report, cacheKey) {
+    if (report.rules.some((r) => r.id === 'password-input')) return;
+
+    const apply = async () => {
+      const rules = [...report.rules, { id: 'password-input', score: 20, detail: null }];
+      const score = rules.reduce((s, r) => s + r.score, 0);
+      const level = classifyRisk(score);
+      const updated = { ...report, score, level, rules };
+      await setReport(cacheKey, updated);
+      if (!updated.ignored && (level === 'suspicious' || level === 'danger')) {
+        showWarning(updated);
+      }
+    };
+
+    if (document.querySelector('input[type="password"]')) { apply(); return; }
+
+    const observer = new MutationObserver(() => {
+      if (document.querySelector('input[type="password"]')) {
+        observer.disconnect();
+        apply();
+      }
+    });
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['type'],
+    });
+  }
+
   // === Main flow ===
   async function run() {
     const url = location.href;
@@ -341,6 +382,9 @@
       } else if (debugMode) {
         showDebugOverlay(cached);
       }
+      // Reports are cached per domain from whichever page was scanned first,
+      // so this page may have a password field the cached report doesn't know about.
+      watchForPassword(cached, cacheKey);
       return;
     }
 
@@ -360,7 +404,7 @@
     rules.push(...checkPageContent(title, metaKw, metaDesc, hasPw));
 
     // RDAP domain age — skip for trusted suffixes and IP addresses
-    const isTrusted = !!checkTrustedSuffix(hostname);
+    const isTrusted = !!ts;
     const tld = domain ? domain.split('.').pop().toLowerCase() : '';
 
     if (!isTrusted && !isIP) {
@@ -368,16 +412,17 @@
       let regDate = null;
       let hasServer = false;
 
-      if (rdapCached && Date.now() - rdapCached.timestamp < RDAP_TTL) {
+      // Failed lookups are cached too (short TTL) so a broken or missing RDAP
+      // server doesn't trigger a fresh query on every page load.
+      const rdapTtl = rdapCached && rdapCached.registrationDate ? RDAP_TTL : RDAP_FAIL_TTL;
+      if (rdapCached && Date.now() - rdapCached.timestamp < rdapTtl) {
         regDate = rdapCached.registrationDate;
-        hasServer = true;
+        hasServer = rdapCached.hasServer !== false; // entries from older versions lack hasServer
       } else {
         const rdapResult = await queryRdap(domain);
         regDate = rdapResult.registrationDate;
         hasServer = rdapResult.hasServer;
-        if (regDate) {
-          await setCache('rdap:' + domain, { registrationDate: regDate, timestamp: Date.now() });
-        }
+        await setCache('rdap:' + domain, { registrationDate: regDate, hasServer, timestamp: Date.now() });
       }
 
       if (regDate) {
@@ -403,6 +448,8 @@
     } else if (debugMode) {
       showDebugOverlay(report);
     }
+
+    if (!hasPw) watchForPassword(report, cacheKey);
   }
 
   run();

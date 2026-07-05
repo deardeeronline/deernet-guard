@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - run: npm ci
+
+      - name: Build extension
+        run: npm run build
+
+      - name: Syntax-check built output
+        run: |
+          node --check dist/chrome-extension/content.js
+          node --check dist/chrome-extension/background.js
+          node --check dist/chrome-extension/popup/popup.js
+          node -e "JSON.parse(require('fs').readFileSync('dist/chrome-extension/manifest.json','utf8')); console.log('manifest OK')"
+
+      - name: Verify no unreplaced build placeholders
+        run: |
+          ! grep -nE '__(PSL|WHITELIST|TRUSTED_SUFFIXES|RISKY_DOMAINS|SENSITIVE_KEYWORDS|DATA_HASH|RDAP_SERVERS)__' dist/chrome-extension/content.js dist/chrome-extension/background.js

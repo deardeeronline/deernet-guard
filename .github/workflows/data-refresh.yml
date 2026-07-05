@@ -1,0 +1,59 @@
+# Weekly detection-data refresh.
+#
+# Regenerates the RDAP server map (IANA bootstrap) and the whitelist (latest
+# Tranco list), runs the RDAP health check, verifies the build, and opens a PR
+# if anything changed. Registry endpoint migrations and whitelist drift get
+# caught here instead of silently degrading detection in the field.
+#
+# After merging a data-refresh PR, ship it: npm run build → upload to the
+# Chrome Web Store (data is baked into the extension at build time).
+
+name: Data refresh
+
+on:
+  schedule:
+    - cron: '0 3 * * 1' # Mondays 03:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - run: npm ci
+
+      - name: Regenerate RDAP server map from IANA bootstrap
+        run: npm run generate-rdap-servers
+
+      - name: Regenerate whitelist from latest Tranco list
+        run: npm run generate-whitelist
+
+      - name: RDAP health check
+        run: npm run check-rdap-health
+
+      - name: Verify build
+        run: npm run build
+
+      - name: Open PR if data changed
+        uses: peter-evans/create-pull-request@v8
+        with:
+          add-paths: packages/core/data
+          branch: chore/data-refresh
+          commit-message: 'chore: weekly data refresh (RDAP map + whitelist)'
+          title: 'chore: weekly data refresh (RDAP map + whitelist)'
+          body: |
+            Automated weekly refresh:
+            - `rdap-servers.json` regenerated from the IANA RDAP bootstrap registry
+            - `whitelist-domains.json` regenerated from the latest Tranco list
+            - RDAP health check passed
+
+            After merging, run `npm run build` and publish the new version to the Chrome Web Store so the refreshed data actually reaches users.
