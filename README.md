@@ -53,7 +53,7 @@
 - 16 個免費子域名平台識別
 - 全球政府 / 教育 / 軍事域名的受信任識別（PSL 自動判斷）
 
-RDAP 是唯一對外請求，只送出域名名稱給該 TLD 的官方 registry。TLD 沒有 RDAP service 時（如 `.co`、`.io`、`.jp`）**不會**發出任何請求、也不會 fallback 到第三方。
+對外請求只有兩種：RDAP 查詢（只送出域名名稱給該 TLD 的官方 registry；TLD 沒有 RDAP service 時如 `.co`、`.io`、`.jp` **不會**發出任何請求、也不會 fallback 到第三方）、以及每日一次向 GitHub Pages 下載簽章過的偵測資料包（純靜態檔案，不含任何瀏覽資訊，可關閉）。
 
 ## Debug Mode
 
@@ -109,11 +109,21 @@ npm run build
 
 ## 更新機制
 
-偵測資料（白名單、TLD 清單、RDAP map）在 build 時燒進 extension，更新流程：
+偵測資料（白名單、TLD 清單、RDAP map、計分參數）有兩條更新管道：
+
+**1. Remote data 更新（日級，不需發版）**
+
+- Merge 進 main 的資料異動會觸發 `publish-data.yml`：打包 + ECDSA P-256 簽章 → 部署到 GitHub Pages（`https://deardeeronline.github.io/deernet-guard/data/v1/rules.json`）。
+- 已安裝的 extension 每天（`chrome.alarms`）抓一次資料包：**驗簽（公鑰燒在 extension 內）→ schema / 結構 / sanity bounds 三道驗證** → 通過才存進 `chrome.storage.local`;任一步失敗保留上一份好資料，最終 fallback 是 build 時燒進去的內建資料。
+- MV3 合規：遠端更新的是純 JSON **資料**,不含任何可執行程式碼(Chrome 明確允許)。
+- 使用者可在 popup 關閉「自動更新偵測資料」。
+- 一次性設定:GitHub Pages Source 選 **GitHub Actions**、跑 `npm run generate-signing-key`、把私鑰加進 repo secret `DATA_SIGNING_KEY`、commit 公鑰檔。
+
+**2. 發版更新（邏輯 / 權限變更時）**
 
 1. **每週一** GitHub Actions（`data-refresh.yml`）自動重新生成 RDAP map 與白名單、跑健康檢查，有異動自動開 PR。
-2. Merge 資料 PR 後，bump `manifest.json` 版本 → `npm run build` → 上傳 Chrome Web Store。
-3. 使用者端 cache 會自動失效重跑：報告 cache key 帶「rules version + 資料 hash」，資料一換就重新評分。
+2. 偵測**邏輯**、manifest 權限、UI 變更仍需發版：bump `manifest.json` 版本 → `npm run build` → 上傳 Chrome Web Store。
+3. 使用者端 cache 會自動失效重跑：報告 cache key 帶「rules version + 資料版本」，資料一換就重新評分。
 
 ## 架構說明
 

@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.0 — 2026-07-06
+
+### Remote data 更新（不發版即可更新偵測資料）
+
+- **每日自動抓取簽章資料包**:extension 用 `chrome.alarms` 每天向 GitHub Pages 下載偵測資料包(白名單、TLD 清單、RDAP map、計分參數),**ECDSA P-256 驗簽(公鑰燒在 extension 內)+ schema / 結構 / sanity bounds 三道驗證**通過才採用;失敗一律保留上一份好資料,最終 fallback 是內建資料。MV3 合規(遠端更新的是純 JSON 資料,非程式碼)。
+- **計分參數搬進資料包**:`domain-age-unknown` 的 +20/+30 與 suspicious/danger 門檻(30/60)改由 `packages/core/data/scoring.json` 提供,可透過資料包調整,不需發版。
+- **發佈管線**:`publish-data.yml` 在 main 的資料異動時自動打包、簽章、部署到 GitHub Pages。新增 `npm run generate-signing-key`(一次性產生金鑰)與 `npm run generate-data-bundle`。
+- **popup 新增**:「自動更新偵測資料」開關(預設開)與目前資料版本顯示。
+- **權限**:新增 `alarms` permission 與 `deardeeronline.github.io` host permission。
+- 隱私政策與 README 同步更新(對外請求:RDAP + 每日資料包下載,皆不含用戶瀏覽資訊)。
+
 ## 1.1.0 — 2026-07-03
 
 ### RDAP 覆蓋大幅擴充與修復

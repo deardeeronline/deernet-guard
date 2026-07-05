@@ -35,11 +35,17 @@ const trustedSuffixes = readFileSync(join(dataDir, 'trusted-suffixes.json'), 'ut
 const riskyDomains = readFileSync(join(dataDir, 'risky-domains.json'), 'utf-8').trim();
 const sensitiveKeywords = readFileSync(join(dataDir, 'sensitive-keywords.json'), 'utf-8').trim();
 const rdapServers = JSON.parse(readFileSync(join(dataDir, 'rdap-servers.json'), 'utf-8'));
+const scoring = readFileSync(join(dataDir, 'scoring.json'), 'utf-8').trim();
+
+// Data bundle signing public key — optional until generated (see
+// scripts/generate-signing-key.js). Without it, remote data update stays off.
+const pubKeyFile = join(dataDir, 'signing-public-key.json');
+const dataPublicKey = existsSync(pubKeyFile) ? readFileSync(pubKeyFile, 'utf-8').trim() : 'null';
 
 // Short hash of all injected data — combined with the manual rules version so
 // cached reports are invalidated whenever a data refresh ships.
 const dataHash = createHash('sha256')
-  .update([whitelist, trustedSuffixes, riskyDomains, sensitiveKeywords, JSON.stringify(rdapServers.servers)].join('\n'))
+  .update([whitelist, trustedSuffixes, riskyDomains, sensitiveKeywords, scoring, JSON.stringify(rdapServers.servers)].join('\n'))
   .digest('hex')
   .slice(0, 8);
 
@@ -51,22 +57,26 @@ contentJs = contentJs.replaceAll('__WHITELIST__', () => whitelist);
 contentJs = contentJs.replaceAll('__TRUSTED_SUFFIXES__', () => trustedSuffixes);
 contentJs = contentJs.replaceAll('__RISKY_DOMAINS__', () => riskyDomains);
 contentJs = contentJs.replaceAll('__SENSITIVE_KEYWORDS__', () => sensitiveKeywords);
+contentJs = contentJs.replaceAll('__SCORING__', () => scoring);
 contentJs = contentJs.replaceAll('__DATA_HASH__', () => JSON.stringify(dataHash));
 
 writeFileSync(join(DIST, 'content.js'), contentJs);
 console.log('Built content.js with injected PSL + data (data hash ' + dataHash + ')');
 
-// 3b. Inject RDAP server map into background.js
+// 3b. Inject RDAP server map + signing public key into background.js
 let backgroundJs = readFileSync(join(DIST, 'background.js'), 'utf-8');
 backgroundJs = backgroundJs.replaceAll('__RDAP_SERVERS__', () => JSON.stringify(rdapServers.servers));
+backgroundJs = backgroundJs.replaceAll('__DATA_PUBLIC_KEY__', () => dataPublicKey);
 writeFileSync(join(DIST, 'background.js'), backgroundJs);
 console.log('Built background.js with ' + Object.keys(rdapServers.servers).length + ' RDAP TLDs (IANA bootstrap ' + rdapServers.publication + ')');
+console.log('Remote data update: ' + (dataPublicKey === 'null' ? 'DISABLED (no signing-public-key.json — run npm run generate-signing-key)' : 'enabled'));
 
 // 3c. Generate manifest host_permissions from the RDAP server map, so adding
 // or migrating registries never requires a hand-edited manifest.
 const manifest = JSON.parse(readFileSync(join(DIST, 'manifest.json'), 'utf-8'));
 const rdapOrigins = [...new Set(Object.values(rdapServers.servers).map((u) => 'https://' + new URL(u).host + '/*'))].sort();
-manifest.host_permissions = rdapOrigins;
+// Data bundle host (GitHub Pages) + RDAP registries
+manifest.host_permissions = ['https://deardeeronline.github.io/*', ...rdapOrigins];
 writeFileSync(join(DIST, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
 console.log('Generated manifest host_permissions: ' + rdapOrigins.length + ' RDAP hosts');
 

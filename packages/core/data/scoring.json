@@ -1,0 +1,6 @@
+{
+  "domainAgeUnknown": 20,
+  "domainAgeUnknownRiskyTld": 30,
+  "suspiciousThreshold": 30,
+  "dangerThreshold": 60
+}

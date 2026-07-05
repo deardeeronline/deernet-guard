@@ -176,6 +176,16 @@ body {
   gap: 6px;
 }
 
+.debug-label + .debug-label {
+  margin-top: 6px;
+}
+
+.data-version {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #d1d5db;
+}
+
 .debug-label input {
   cursor: pointer;
 }

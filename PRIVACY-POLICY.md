@@ -1,6 +1,6 @@
 # Deer Guard 隱私權政策 / Privacy Policy
 
-最後更新：2026-03-18
+最後更新：2026-07-06
 
 ## 中文
 
@@ -12,7 +12,9 @@ Deer Guard **不收集、不傳送、不儲存任何用戶個人資料**。
 
 - 所有網站風險偵測邏輯完全在您的瀏覽器本地執行
 - 偵測結果僅儲存在您瀏覽器的本地儲存空間（`chrome.storage.local`），不會傳送至任何外部伺服器
-- 唯一的對外請求為 RDAP 查詢（Registration Data Access Protocol），僅向該域名的 TLD 註冊機構查詢域名註冊時間，查詢內容僅包含域名本身，不包含任何用戶資訊
+- 對外請求僅有兩種：
+  1. **RDAP 查詢**（Registration Data Access Protocol）：僅向該域名的 TLD 註冊機構查詢域名註冊時間，查詢內容僅包含域名本身，不包含任何用戶資訊
+  2. **偵測資料更新**：每日最多一次向 GitHub Pages（本專案的靜態空間）下載最新偵測資料（白名單、TLD 清單等）。此請求為單純的靜態檔案下載，**不包含任何瀏覽紀錄、網址或用戶資訊**，且經數位簽章驗證。可在擴充套件面板中關閉「自動更新偵測資料」
 
 ### 權限說明
 
@@ -20,11 +22,13 @@ Deer Guard **不收集、不傳送、不儲存任何用戶個人資料**。
 |------|------|
 | `activeTab` | 讀取當前分頁的網址和頁面標題，用於風險偵測 |
 | `storage` | 在本地儲存偵測結果快取，避免重複偵測 |
+| `alarms` | 排程每日一次的偵測資料更新檢查 |
 | `host_permissions`（RDAP servers） | 查詢域名註冊時間，判斷是否為新註冊的可疑域名 |
+| `host_permissions`（deardeeronline.github.io） | 下載簽章過的偵測資料更新包 |
 
 ### 第三方服務
 
-本擴充套件僅與各 TLD 註冊機構的 RDAP 服務通訊，查詢內容僅為域名名稱。不使用任何分析工具、追蹤器或廣告服務。
+本擴充套件僅與各 TLD 註冊機構的 RDAP 服務（查詢內容僅為域名名稱）及 GitHub Pages（下載偵測資料，無任何用戶資訊）通訊。不使用任何分析工具、追蹤器或廣告服務。
 
 ### 資料保留
 
@@ -50,7 +54,9 @@ Deer Guard **does not collect, transmit, or store any personal user data**.
 
 - All website risk detection logic runs entirely in your browser locally
 - Detection results are stored only in your browser's local storage (`chrome.storage.local`) and are never sent to any external server
-- The only external requests are RDAP queries (Registration Data Access Protocol) to TLD registries to check domain registration dates. These queries contain only the domain name and no user information
+- There are only two kinds of external requests:
+  1. **RDAP queries** (Registration Data Access Protocol) to TLD registries to check domain registration dates. These queries contain only the domain name and no user information
+  2. **Detection data updates**: at most once per day, the extension downloads the latest detection data (whitelist, TLD lists, etc.) from GitHub Pages. This is a plain static file download containing **no browsing history, URLs, or user information**, and is verified with a digital signature. It can be disabled via the "自動更新偵測資料" toggle in the popup
 
 ### Permissions
 
@@ -58,11 +64,13 @@ Deer Guard **does not collect, transmit, or store any personal user data**.
 |-----------|---------|
 | `activeTab` | Read the current tab's URL and page title for risk detection |
 | `storage` | Store detection result cache locally to avoid redundant checks |
+| `alarms` | Schedule the once-daily detection data update check |
 | `host_permissions` (RDAP servers) | Query domain registration dates to identify newly registered suspicious domains |
+| `host_permissions` (deardeeronline.github.io) | Download the signed detection data bundle |
 
 ### Third-Party Services
 
-This extension communicates only with RDAP services operated by TLD registries. No analytics, trackers, or advertising services are used.
+This extension communicates only with RDAP services operated by TLD registries (queries contain only the domain name) and GitHub Pages (detection data download, no user information). No analytics, trackers, or advertising services are used.
 
 ### Data Retention
 

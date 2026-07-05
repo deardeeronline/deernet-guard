@@ -10,17 +10,48 @@
   // === PSL (injected by build) ===
   const psl = __PSL__;
 
-  // === Data (injected by build) ===
-  const WHITELIST = new Set(__WHITELIST__);
-  const TRUSTED_SUFFIXES = new Set(__TRUSTED_SUFFIXES__);
-  const RISKY_DOMAINS = __RISKY_DOMAINS__;
-  const SENSITIVE_KEYWORDS = __SENSITIVE_KEYWORDS__;
-  const ALL_KEYWORDS = [...SENSITIVE_KEYWORDS.zh, ...SENSITIVE_KEYWORDS.en.map(k => k.toLowerCase())];
+  // === Data (injected by build; overridden by verified remote data at runtime) ===
+  const BAKED_DATA = {
+    whitelist: __WHITELIST__,
+    trustedSuffixes: __TRUSTED_SUFFIXES__,
+    riskyDomains: __RISKY_DOMAINS__,
+    sensitiveKeywords: __SENSITIVE_KEYWORDS__,
+    scoring: __SCORING__,
+  };
+  // Cache key version = manual rules version + active data version, so both
+  // logic changes and data refreshes invalidate cached reports.
+  const BAKED_VERSION = '13.' + __DATA_HASH__;
+
+  let WHITELIST, TRUSTED_SUFFIXES, RISKY_DOMAINS, ALL_KEYWORDS, SCORING, whitelistLabels, RULES_VERSION;
+
+  function applyData(d, version) {
+    WHITELIST = new Set(d.whitelist);
+    TRUSTED_SUFFIXES = new Set(d.trustedSuffixes);
+    RISKY_DOMAINS = d.riskyDomains;
+    ALL_KEYWORDS = [...d.sensitiveKeywords.zh, ...d.sensitiveKeywords.en.map(k => k.toLowerCase())];
+    SCORING = d.scoring;
+    whitelistLabels = d.whitelist.map(dm => ({ label: extractLabel(dm), full: dm }));
+    RULES_VERSION = version;
+  }
+
+  // Prefer the remote bundle if the service worker has stored one. Only a
+  // light shape guard is needed here — the service worker signature-verifies
+  // and sanity-validates every bundle before storing it.
+  async function initData() {
+    applyData(BAKED_DATA, BAKED_VERSION);
+    try {
+      const { remoteData } = await chrome.storage.local.get('remoteData');
+      if (remoteData && remoteData.schema === 1 && remoteData.dataVersion &&
+          Array.isArray(remoteData.whitelist) && remoteData.whitelist.length > 1000 &&
+          remoteData.scoring) {
+        applyData(remoteData, '13.r.' + remoteData.dataVersion);
+      }
+    } catch {
+      // storage unavailable — baked data already applied
+    }
+  }
 
   // === Cache constants ===
-  // Cache key version = manual rules version + build-time hash of injected data,
-  // so both logic changes and data refreshes invalidate cached reports.
-  const RULES_VERSION = '12.' + __DATA_HASH__;
   const REPORT_TTL = 10 * 24 * 60 * 60 * 1000;
   const RDAP_TTL = 365 * 24 * 60 * 60 * 1000;
   const RDAP_FAIL_TTL = 24 * 60 * 60 * 1000; // failed lookups retry after a day
@@ -87,8 +118,6 @@
     return (isCc ? parts.slice(0, -2) : parts.slice(0, -1)).join('.');
   }
 
-  const whitelistLabels = __WHITELIST__.map(d => ({ label: extractLabel(d), full: d }));
-
   function checkSimilarity(domain) {
     if (!domain) return null;
     const label = extractLabel(domain);
@@ -137,8 +166,8 @@
 
   function classifyRisk(score) {
     if (score <= 0) return 'low';
-    if (score < 30) return 'normal';
-    if (score < 60) return 'suspicious';
+    if (score < SCORING.suspiciousThreshold) return 'normal';
+    if (score < SCORING.dangerThreshold) return 'suspicious';
     return 'danger';
   }
 
@@ -354,6 +383,8 @@
 
   // === Main flow ===
   async function run() {
+    await initData();
+
     const url = location.href;
     const { hostname, domain } = parseDomain(url);
     const isIP = /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname);
@@ -430,9 +461,9 @@
         if (ageRule) rules.push(ageRule);
       } else if (!hasServer) {
         const isRiskyTLD = RISKY_DOMAINS.riskyTLDs.includes(tld);
-        rules.push({ id: 'domain-age-unknown', score: isRiskyTLD ? 30 : 20, detail: '無法查詢域名年齡 (.' + tld + ')' });
+        rules.push({ id: 'domain-age-unknown', score: isRiskyTLD ? SCORING.domainAgeUnknownRiskyTld : SCORING.domainAgeUnknown, detail: '無法查詢域名年齡 (.' + tld + ')' });
       } else {
-        rules.push({ id: 'domain-age-unknown', score: 20, detail: '域名年齡查詢失敗' });
+        rules.push({ id: 'domain-age-unknown', score: SCORING.domainAgeUnknown, detail: '域名年齡查詢失敗' });
       }
     }
 

@@ -29,4 +29,4 @@ jobs:
 
       - name: Verify no unreplaced build placeholders
         run: |
-          ! grep -nE '__(PSL|WHITELIST|TRUSTED_SUFFIXES|RISKY_DOMAINS|SENSITIVE_KEYWORDS|DATA_HASH|RDAP_SERVERS)__' dist/chrome-extension/content.js dist/chrome-extension/background.js
+          ! grep -nE '__(PSL|WHITELIST|TRUSTED_SUFFIXES|RISKY_DOMAINS|SENSITIVE_KEYWORDS|SCORING|DATA_HASH|RDAP_SERVERS|DATA_PUBLIC_KEY)__' dist/chrome-extension/content.js dist/chrome-extension/background.js

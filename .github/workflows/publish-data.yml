@@ -1,0 +1,56 @@
+# Publishes the signed remote data bundle to GitHub Pages.
+#
+# Runs whenever detection data changes on main (e.g. after merging a weekly
+# data-refresh PR). Installed extensions fetch the bundle within 24 hours —
+# no store release needed for data updates.
+#
+# Requirements (one-time setup):
+#   1. Settings → Pages → Build and deployment → Source: "GitHub Actions"
+#   2. Repository secret DATA_SIGNING_KEY (see scripts/generate-signing-key.js)
+#   3. packages/core/data/signing-public-key.json committed
+
+name: Publish data bundle
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/core/data/**'
+      - 'scripts/generate-data-bundle.js'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Build signed data bundle
+        run: node scripts/generate-data-bundle.js
+        env:
+          DATA_SIGNING_KEY: ${{ secrets.DATA_SIGNING_KEY }}
+
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+      - id: deployment
+        uses: actions/deploy-pages@v5

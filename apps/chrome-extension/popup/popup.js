@@ -203,3 +203,18 @@ chrome.storage.local.get('debugMode', (r) => {
 debugCheckbox.addEventListener('change', () => {
   chrome.storage.local.set({ debugMode: debugCheckbox.checked });
 });
+
+// --- Remote data auto-update ---
+const dataUpdateCheckbox = document.getElementById('data-auto-update');
+const dataVersionDisplay = document.getElementById('data-version');
+
+chrome.storage.local.get(['dataAutoUpdate', 'remoteData'], (r) => {
+  dataUpdateCheckbox.checked = r.dataAutoUpdate !== false; // default on
+  dataVersionDisplay.textContent = r.remoteData?.dataVersion
+    ? '偵測資料版本：' + r.remoteData.dataVersion
+    : '偵測資料版本：內建';
+});
+
+dataUpdateCheckbox.addEventListener('change', () => {
+  chrome.storage.local.set({ dataAutoUpdate: dataUpdateCheckbox.checked });
+});

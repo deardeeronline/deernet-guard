@@ -9,6 +9,8 @@
     "generate-whitelist": "node scripts/generate-whitelist.js",
     "generate-rdap-servers": "node scripts/generate-rdap-servers.js",
     "check-rdap-health": "node scripts/check-rdap-health.js",
+    "generate-signing-key": "node scripts/generate-signing-key.js",
+    "generate-data-bundle": "node scripts/generate-data-bundle.js",
     "generate-icons": "node scripts/generate-icons.js"
   },
   "dependencies": {
